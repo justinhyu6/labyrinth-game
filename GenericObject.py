@@ -1,40 +1,39 @@
+import math, copy, random
+
+from Board import *
+
 class GenericObject:
-    def __init__(self, row, col, x, y):
-        self.row = row
-        self.col = col
+    def __init__(self, app, tileRow, tileCol):
+        self.tileRow = tileRow
+        self.tileCol = tileCol
+        x, y = getTileCenter(app, tileRow, tileCol)
         self.x = x
         self.y = y
     
-    def getRow(self):
-        return self.row
+    def getTileRow(self):
+        return self.tileRow
     
-    def getCol(self):
-        return self.col
+    def getTileCol(self):
+        return self.tileCol
     
-    def move(self, tileRows, tileCols, cellSize, wrap):
-        self.row += 3 * tileRows
-        self.col += 3 * tileCols
+    def shift(self, app, tileRowShift, tileColShift):
+        self.tileRow += tileRowShift
+        self.tileCol += tileColShift
 
-        if(wrap == True):
-            if(self.row >= 21):
-                self.y -= 21 * cellSize
-                self.row -= 21
-            elif(self.col >= 21):
-                self.x -= 21 * cellSize
-                self.col -= 21
-            elif(self.row < 0):
-                self.y += 21 * cellSize
-                self.row += 21
-            elif(self.col < 0):
-                self.x += 21 * cellSize
-                self.col += 21
-            
-        self.x += 3 * tileCols * cellSize
-        self.y += 3 * tileRows * cellSize
+        if(self.tileRow >= 7):
+            self.tileRow = 0
+        elif(self.tileCol >= 7):
+            self.tileCol = 0
+        elif(self.tileRow < 0):
+            self.tileRow = 6
+        elif(self.tileCol < 0):
+            self.tileCol = 6
+        
+        self.x, self.y = getTileCenter(app, self.tileRow, self.tileCol)
 
 class Wizard(GenericObject):
-    def __init__(self, row, col, x, y, color):
-        super().__init__(row, col, x, y)
+    def __init__(self, app, tileRow, tileCol, color):
+        super().__init__(app, tileRow, tileCol)
         self.color = color
     
     def redraw(self, canvas):
@@ -45,10 +44,36 @@ class Wizard(GenericObject):
         y1 = self.y + radius
         canvas.create_oval(x0, y0, x1, y1,
                             fill=self.color, outline='black', width=0)
+    
+    def move(self, app, tileRowShift, tileColShift):
+        newTileRow = self.tileRow+tileRowShift
+        newTileCol = self.tileCol+tileColShift
+        if(tileRowShift == 0 and tileColShift == 0):
+            return None
+        elif(newTileRow < 0 or newTileRow >= app.tileRows or
+            newTileCol < 0 or newTileCol >= app.tileCols):
+            return None
+
+        tileToCheck = app.board[newTileRow][newTileCol]
+        hasPath = False
+        if(tileColShift == -1):
+            hasPath = tileToCheck.getList()[1][2]
+        elif(tileColShift == 1):
+            hasPath = tileToCheck.getList()[1][0]
+        elif(tileRowShift == -1):
+            hasPath = tileToCheck.getList()[2][1]
+        elif(tileRowShift == 1):
+            hasPath = tileToCheck.getList()[0][1]
+        
+        currentTile = app.board[self.tileRow][self.tileCol]
+        hasPathCurrent = currentTile.getList()[1+tileRowShift][1+tileColShift]
+
+        if(hasPath and hasPathCurrent):
+            self.shift(app, tileRowShift, tileColShift)
 
 class Treasure(GenericObject):
-    def __init__(self, row, col, x, y, name):
-        super().__init__(row, col, x, y)
+    def __init__(self, app, tileRow, tileCol, name):
+        super().__init__(app, tileRow, tileCol)
         self.name = name
     
     def redraw(self, canvas):

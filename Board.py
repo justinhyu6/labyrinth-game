@@ -1,5 +1,5 @@
 #################################################
-# Labyrinth_Game.py
+# Board.py
 #
 # Your name: Justin Yu
 # Your andrew id: justinyu
@@ -9,7 +9,7 @@ import math, copy, random
 
 from cmu_112_graphics import *
 from Interface import *
-from Player import *
+from GenericObject import *
 
 #################################################
 # Labyrinth
@@ -19,7 +19,6 @@ from Player import *
 # Playing in background title screen
 
 # Todo
-# Make tiles classes
 # Add tile animations
 
 # Treasures to movable tiles and make them shiftable
@@ -41,25 +40,24 @@ def appStarted(app):
 
     (rows, cols, cellSize, margin) = gameDimensions()
     app.rows, app.cols, app.cellSize, app.margin = rows, cols, cellSize, margin
-    app.tileRows = 7
-    app.tileCols = 7
+    app.tileRows, app.tileCols, app.tileSize = 7, 7, app.cellSize * 3
     app.innerMargin = 6
     app.outerMargin = 1
     app.labyrinthWidth = app.cols * app.cellSize + 2 * app.margin
     app.labyrinthHeight = app.rows * app.cellSize + 2 * app.margin
 
     result = []
-    for row in range(app.rows):
-        result += [[0] * app.cols]
+    for row in range(app.tileRows):
+        result += [[0] * app.tileCols]
     app.board = result
     app.targetBoard = copy.deepcopy(result)
     app.labyrinthTiles = getTiles()
     app.immovableTiles = getImmovableTiles(app)
-    app.currentTile = [
+    app.currentTile = Tile(app, 0, 9, [
         [False, False, False],
         [False, False, False],
         [False, False, False]
-    ]
+    ])
     
     app.buttons = []
     addShiftButtons(app)
@@ -73,33 +71,28 @@ def appStarted(app):
     app.timePassed = 0
 
 def addWizards(app):
-    x0, y0 = getCellCenter(app, 19, 1)
-    app.wizards.append(Wizard(19, 1, x0, y0, 'tomato'))
+    app.wizards.append(Wizard(app, 6, 0,'tomato'))
 
 def addTreasures(app):
-    x0, y0 = getCellCenter(app, 19, 7)
-    app.treasures.append(Treasure(19, 7, x0, y0, 'Gold'))
-    x0, y0 = getCellCenter(app, 19, 13)
-    app.treasures.append(Treasure(19, 11, x0, y0, 'Book'))
-    x0, y0 = getCellCenter(app, 13, 1)
-    app.treasures.append(Treasure(13, 1, x0, y0, 'Skull'))
-    x0, y0 = getCellCenter(app, 13, 7)
-    app.treasures.append(Treasure(13, 7, x0, y0, 'Keys'))
+    app.treasures.append(Treasure(app, 6, 2, 'Gold'))
+    app.treasures.append(Treasure(app, 6, 4, 'Book'))
+    app.treasures.append(Treasure(app, 4, 0, 'Skull'))
+    app.treasures.append(Treasure(app, 4, 2, 'Keys'))
     
 def addShiftButtons(app):
     for row in [4, 10, 16]:
         for col in [-2, 22]:
-            indexToShift = row
+            indexToShift = row//3
             if(col == -2):
                 shiftAmount = -1
             elif(col == 22):
                 shiftAmount = 1
             x0, y0, x1, y1 = getCellBounds(app, row, col, False, False)
             app.buttons.append(Button(x0, y0, x1-x0, y1-y0, 'gold', 
-                                ('shift', indexToShift, 0, shiftAmount)))
+                                ('shift', indexToShift, -1, shiftAmount)))
             x2, y2, x3, y3 = getCellBounds(app, col, row, False, False)
             app.buttons.append(Button(x2, y2, x3-x2, y3-y2, 'gold', 
-                                ('shift', 0, indexToShift, shiftAmount)))
+                                ('shift', -1, indexToShift, shiftAmount)))
 
 def addRotateButton(app):
     x0, y0, x1, y1 = getCellBounds(app, 4, app.cols + 7, False, False)
@@ -113,22 +106,19 @@ def mousePressed(app, event):
 
 def buttonPressed(app, function):
     if('rotate' in function): 
-        app.currentTile = rotateTile(app.currentTile, 1)
+        app.currentTile.rotate(1)
     elif('shift' in function):
-        row = function[1]
-        col = function[2]
-        shift = function[3]
-        shiftBoard(app, row, col, shift)
+        tileRow = function[1]
+        tileCol = function[2]
+        shiftAmount = function[3]
+        shiftBoard(app, tileRow, tileCol, shiftAmount)
         
         allObjects = app.treasures + app.wizards
         for object in allObjects:
-            wrap = False
-            if(isinstance(object, Wizard)):
-                wrap = True
-            if(object.getRow() == row):
-                object.move(0, shift, app.cellSize, wrap)
-            elif(object.getCol() == col):
-                object.move(shift, 0, app.cellSize, wrap)
+            if(object.getTileRow() == tileRow):
+                object.shift(app, 0, -shiftAmount)
+            elif(object.getTileCol() == tileCol):
+                object.shift(app, -shiftAmount, 0)
 
 def keyPressed(app, event):
     if(app.gameStarted == False):
@@ -136,26 +126,14 @@ def keyPressed(app, event):
         generateLabyrinth(app)
     
     for wizard in app.wizards:
-        move = (0, 0)
         if(event.key == 'Up'):
-            move = (-1, 0)
+            wizard.move(app, -1, 0)
         elif(event.key == 'Down'):
-            move = (1, 0)
+            wizard.move(app, 1, 0)
         elif(event.key == 'Left'):
-            move = (0, -1)
+            wizard.move(app, 0, -1)
         elif(event.key == 'Right'):
-            move = (0, 1)
-        
-        if(move != (0, 0)):
-            checkRow1 = wizard.getRow() + move[0]
-            checkCol1 = wizard.getCol() + move[1]
-            checkRow2 = checkRow1 + move[0]
-            checkCol2 = checkCol1 + move[1]
-            
-            if(checkRow2 >= 0 and checkRow2 < app.rows and checkCol2 >= 0 and 
-            checkCol2 < app.cols and app.board[checkRow1][checkCol1] != False
-            and app.board[checkRow2][checkCol2] != False):
-                wizard.move(move[0], move[1], app.cellSize, False)
+            wizard.move(app, 0, 1)
 
 def timerFired(app):
     app.timePassed += 1
@@ -168,19 +146,10 @@ def boardCreationAnimation(app):
     for tileRow in range(app.tileRows):
         for tileCol in range(app.tileCols):
             if(tileRow + tileCol == app.diagonalsDrawn):
-                updateTile(app, tileRow, tileCol)
+                app.board[tileRow][tileCol] = app.targetBoard[tileRow][tileCol]
     app.diagonalsDrawn += 1
     if(app.diagonalsDrawn == 13):
         app.boardCreated == True
-            
-def updateTile(app, tileRow, tileCol):
-    startRow = tileRow * 3
-    endRow = (tileRow + 1) * 3
-    startCol = tileCol
-    endCol = (tileCol + 1) * 3
-    for row in range(startRow, endRow):
-        for col in range(startCol, endCol):
-            app.board[row][col] = app.targetBoard[row][col]
 
 def redrawAll(app, canvas):
     canvas.create_rectangle(0, 0, app.width, app.height, 
@@ -196,7 +165,7 @@ def redrawAll(app, canvas):
         drawTitleScreen(app, canvas)
 
     if(app.gameStarted == True):
-        drawCurrentTile(app, canvas)
+        app.currentTile.drawTile(app, canvas)
         for button in app.buttons:
             button.redraw(canvas)
         for treasure in app.treasures:
@@ -214,22 +183,8 @@ def drawTitleScreen(app, canvas):
 def drawBoard(app, canvas):
     for tileRow in range(app.tileRows):
         for tileCol in range(app.tileCols):
-            drawTile(app, canvas, tileRow, tileCol)
-            
-def drawTile(app, canvas, tileRow, tileCol):
-    startRow = tileRow * 3
-    endRow = (tileRow + 1) * 3
-    startCol = tileCol
-    endCol = (tileCol + 1) * 3
-    for row in range(startRow, endRow):
-        for col in range(startCol, endCol):
-            drawCell(app, canvas, row, col, app.board[row][col])
-
-def drawCurrentTile(app, canvas):
-    for row in range(3):
-        for col in range(3):
-            drawCell(app, canvas, row, app.cols + col + 6, 
-                    app.currentTile[row][col])
+            if(isinstance(app.board[tileRow][tileCol], Tile)):
+                app.board[tileRow][tileCol].drawTile(app, canvas)
 
 # Draws the cell using coordinates from getCellBounds()
 def drawCell(app, canvas, row, col, isPath):
@@ -242,17 +197,6 @@ def drawCell(app, canvas, row, col, isPath):
         x0, y0, x1, y1 = getCellBounds(app, row, col, True, True)
         canvas.create_rectangle(x0, y0, x1, y1,
                                 fill=color, width = 0)
-
-def getCellCenter(app, row, col):
-    gridWidth = app.labyrinthWidth - 2 * app.margin
-    gridHeight = app.labyrinthWidth - 2 * app.margin
-    cellWidth = gridWidth / app.cols
-    cellHeight = gridHeight / app.rows
-    x = app.margin + cellWidth * (col + 0.5)
-    y = app.margin + cellHeight * (row + 0.5)
-
-    return x, y
-
 
 # Gets the coordinates of the cell
 # CITATION: The first half of this function is based on 112 Tetris
@@ -296,19 +240,28 @@ def getCellBounds(app, row, col, applyInnerMargin, applyOuterMargin):
 
     return x0, y0, x1, y1
 
+def getTileCenter(app, tileRow, tileCol):
+        gridWidth = app.labyrinthWidth - 2 * app.margin
+        gridHeight = app.labyrinthWidth - 2 * app.margin
+        tileWidth = gridWidth / app.tileRows
+        tileHeight = gridHeight / app.tileRows
+        x = app.margin + tileWidth * (tileCol + 0.5)
+        y = app.margin + tileHeight * (tileRow + 0.5)
+        return x, y
+
 def generateLabyrinth(app):
     tileCounts = [11, 11, 11]
     immovableTileIndex = 0
-    for tileRow in range(7):
-        for tileCol in range(7):
-            if(tileRow % 2 != 0 or tileCol % 2 != 0): # movebaleTile
+    for tileRow in range(app.tileRows):
+        for tileCol in range(app.tileCols):
+            if(tileRow % 2 != 0 or tileCol % 2 != 0): # moveableTile
                 chooseTile(app, tileRow, tileCol, 
                             tileCounts, immovableTileIndex, True)
             else:
                 chooseTile(app, tileRow, tileCol, 
                             tileCounts, immovableTileIndex, False)
                 immovableTileIndex += 1
-    app.currentTile = app.labyrinthTiles[0]
+    app.currentTile = Tile(app, 0, 9, app.labyrinthTiles[0])
 
 def chooseTile(app, tileRow, tileCol, tileCounts, index, moveableTile):
     # Choose the tile
@@ -318,14 +271,65 @@ def chooseTile(app, tileRow, tileCol, tileCounts, index, moveableTile):
             index = (index + 1) % 3
         tileCounts[index] -= 1
         times = random.randint(0, 3)
-        app.currentTile = rotateTile(app.labyrinthTiles[index], times)
+        L = rotateTile(app.labyrinthTiles[index], times)
+        app.currentTile = Tile(app, tileRow, tileCol, L)
     else:
-        app.currentTile = app.immovableTiles[index]
+        L= app.immovableTiles[index]
+    app.currentTile = Tile(app, tileRow, tileCol, L)
     
-    # Set the board to the tile
-    for row in range(3):
-        for col in range(3):
-            app.targetBoard[tileRow*3+row][tileCol*3+col] = app.currentTile[row][col]
+    app.targetBoard[tileRow][tileCol] = app.currentTile
+
+def shiftBoard(app, targetTileRow, targetTileCol, shift):
+    newBoard = copy.deepcopy(app.board)
+    for tR in range(app.tileRows):
+        for tC in range(app.tileCols):
+            # Shift Row
+            if(tR == targetTileRow):
+                copyTileCol = tC + shift
+                # Right-most tile becomes current tile, current tile becomes
+                # Left-most tile. Happens when shifting left
+                if(copyTileCol >= app.tileCols):
+                    newBoard[tR][tC].setList(app.currentTile.getList())
+                    app.currentTile.setList(app.board[tR][0].getList())
+                # Left-most tile becomes current tile, current tile becomes
+                # Right-most tile. Happens when shifting right
+                elif(copyTileCol < 0):
+                    newBoard[tR][tC].setList(app.currentTile.getList())
+                    app.currentTile.setList(app.board[tR][6].getList())
+                # copy a tile from the original board
+                else:
+                    newBoard[tR][tC].setList(app.board[tR][copyTileCol].getList())
+            # Shift Col
+            if(tC == targetTileCol):
+                copyTileRow = tR + shift
+                if(copyTileRow >= app.tileRows):
+                    newBoard[tR][tC].setList(app.currentTile.getList())
+                    app.currentTile.setList(app.board[0][tC].getList())
+                elif(copyTileRow < 0):
+                    newBoard[tR][tC].setList(app.currentTile.getList())
+                    app.currentTile.setList(app.board[6][tC].getList())
+                else:
+                    newBoard[tR][tC].setList(app.board[copyTileRow][tC].getList())
+    app.board = newBoard
+
+# Returns a 3D list with the type of pieces
+def getTiles():
+    tTile = [
+        [False, False, False],
+        [ True,  True,  True],
+        [False,  True, False]
+    ]
+    iTile = [
+        [False, True, False],
+        [False, True, False],
+        [False, True, False]
+    ]
+    lTile = [
+        [False,  True, False],
+        [False,  True,  True],
+        [False, False, False]
+    ]
+    return [tTile, iTile, lTile]
 
 def getImmovableTiles(app):
     # T-tile 0, I-tile 1, L-tile 2, rotates clockwise 
@@ -349,72 +353,47 @@ def getImmovableTiles(app):
     return [tile1, tile2, tile3, tile4, tile5, tile6, tile7, tile8,
             tile9, tile10, tile11, tile12, tile13, tile14, tile15, tile16]
 
-def shiftBoard(app, row, col, shift):
-    newBoard = copy.deepcopy(app.board)
-    for r in range(app.rows):
-        for c in range(app.cols):
-            # Shift Row
-            if(col == 0 and (r == row-1 or r == row or r == row+1)):
-                copyCol = c - 3 * shift
-                # Right-most tile becomes current tile, current tile becomes
-                # Left-most tile. Happens when shifting left
-                if(copyCol >= app.cols):
-                    newBoard[r][c] = app.currentTile[r%3][c%3]
-                    app.currentTile[r%3][c%3] = app.board[r][c-18]
-                # Left-most tile becomes current tile, current tile becomes
-                # Right-most tile. Happens when shifting right
-                elif(copyCol < 0):
-                    newBoard[r][c] = app.currentTile[r%3][c%3]
-                    app.currentTile[r%3][c%3] = app.board[r][c+18]
-                # copy a tile from the original board
-                else:
-                    newBoard[r][c] = app.board[r][copyCol]
-            # Shift Col
-            if(row == 0 and (c == col-1 or c == col or c == col+1)):
-                copyRow = r - 3 * shift
-                if(copyRow >= app.rows):
-                    newBoard[r][c] = app.currentTile[r%3][c%3]
-                    app.currentTile[r%3][c%3] = app.board[r-18][c]
-                elif(copyRow < 0):
-                    newBoard[r][c] = app.currentTile[r%3][c%3]
-                    app.currentTile[r%3][c%3] = app.board[r+18][c]
-                else:
-                    newBoard[r][c] = app.board[copyRow][c]
-    app.board = newBoard
-
-def rotateTile(tile, times):
-    result = copy.deepcopy(tile)
+def rotateTile(L, times):
+    result = copy.deepcopy(L)
     for i in range(times):
         transposeTile(result)
         for row in range(3):
             result[row] = list(reversed(result[row]))
     return result
 
-def transposeTile(tile):
+def transposeTile(L):
     for row in range(3):
         for col in range(row, 3):
-            temp = tile[row][col]
-            tile[row][col] = tile[col][row]
-            tile[col][row] = temp
+            temp = L[row][col]
+            L[row][col] = L[col][row]
+            L[col][row] = temp
 
-# Returns a 3D list with the type of pieces
-def getTiles():
-    tTile = [
-        [False, False, False],
-        [ True,  True,  True],
-        [False,  True, False]
-    ]
-    iTile = [
-        [False, True, False],
-        [False, True, False],
-        [False, True, False]
-    ]
-    lTile = [
-        [False,  True, False],
-        [False,  True,  True],
-        [False, False, False]
-    ]
-    return [tTile, iTile, lTile]
+class Tile:
+    def __init__(self, app, tileRow, tileCol, L):
+        self.tileRow = tileRow
+        self.tileCol = tileCol
+        self.size = 3 * app.cellSize
+        self.L = L
+    
+    def drawTile(self, app, canvas):
+        for row in range(3):
+            for col in range(3):
+                drawCell(app, canvas, 3*self.tileRow+row, 3*self.tileCol+col,
+                        self.L[row][col])
+    
+    def rotate(self, times):
+        self.L = rotateTile(self.L, times)
+
+
+    def getList(self):
+        return self.L
+
+    def setList(self, L):
+        self.L = L
+        
+    def repr(self):
+        return self.L
+
 
 # Calls gameDimensions() to calculate the size of 
 # the board and then calls runApp()
