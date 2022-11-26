@@ -8,11 +8,6 @@ class Button:
         self.function = function
 
     def redraw(self, canvas):
-
-        canvas.create_rectangle(self.x, self.y,
-                                self.x+self.width, self.y+self.height+4,
-                                fill='dark slate blue', width=0)
-
         canvas.create_rectangle(self.x, self.y,
                                 self.x+self.width, self.y+self.height,
                                 fill=self.color, width=0)
