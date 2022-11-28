@@ -30,21 +30,39 @@ class GenericObject:
         self.x, self.y = getTileCenter(app, self.tileRow, self.tileCol)
 
 class Wizard(GenericObject):
-    def __init__(self, app, tileRow, tileCol, color):
+    def __init__(self, app, tileRow, tileCol, color, facingRight):
         super().__init__(app, tileRow, tileCol)
         self.color = color
+        self.facingRight = facingRight
     
-    def redraw(self, canvas):
-        radius = 12
-        x0 = self.x - radius
-        y0 = self.y - radius
-        x1 = self.x + radius
-        y1 = self.y + radius
-        canvas.create_oval(x0, y0, x1, y1,
-                            fill=self.color, outline='black', width=0)
-    
+    def __eq__(self, other):
+        if(self.color == other.color):
+            return True
+        return False
+
+    def redraw(self, app, canvas):
+        if(self.color == 'red'):
+            if(app.turn == self):
+                sprite = app.redJumpSprites[app.SpriteCounterFast % 8]
+                canvas.create_image(self.x, self.y, image=ImageTk.PhotoImage(app.redCircleSprite))
+            else:
+                sprite = app.redIdleSprites[app.SpriteCounterSlow % 2]
+        if(self.color == 'green'):
+            if(app.turn == self):
+                sprite = app.greenJumpSprites[app.SpriteCounterFast % 8]
+                canvas.create_image(self.x, self.y, image=ImageTk.PhotoImage(app.greenCircleSprite))
+            else:
+                sprite = app.greenIdleSprites[app.SpriteCounterSlow % 2]
+
+        if(self.facingRight == False):
+            sprite = sprite.transpose(Image.FLIP_LEFT_RIGHT)
+        canvas.create_image(self.x, self.y-14, image=ImageTk.PhotoImage(sprite))
+        
     def getColor(self):
         return self.color
+    
+    def faceRight(self, facingRight):
+        self.facingRight = facingRight
     
     def move(self, app, tileRowShift, tileColShift):
         newTileRow = self.tileRow+tileRowShift
@@ -70,9 +88,9 @@ class Wizard(GenericObject):
             self.checkTreasures(app)
         
     def checkTreasures(self, app):
-        if(self.color == 'tomato'):
+        if(self.color == 'red'):
             treasures = app.redTreasuresLeft
-        else:
+        elif(self.color == 'green'):
             treasures = app.greenTreasuresLeft
         treasure = treasures[0]
         if(treasure.getTileRow() == self.tileRow and
@@ -84,6 +102,7 @@ class Treasure(GenericObject):
         super().__init__(app, tileRow, tileCol)
         self.name = name
         self.tile = app.board[tileRow][tileCol]
+        self.image = app.batSprites
 
     def getName(self):
         return self.name
@@ -93,17 +112,35 @@ class Treasure(GenericObject):
         self.tileCol = self.tile.getTileCol()
         self.x, self.y = self.tile.getCoords()
 
-    # def shift(self, app, tileRowShift, tileColShift):
-    #     self.tileRow += tileRowShift
-    #     self.tileCol += tileColShift
-
-    #     if(self.tileRow == 0 or self.tileRow == 8 or self.tileCol == 0
-    #         or self.tileCol == 8):
-    #         self.tileRow = 1
-    #         self.tileCol = 10
-
-    #     self.x, self.y = getTileCenter(app, self.tileRow, self.tileCol)
-    
-    def redraw(self, canvas):
-        canvas.create_text(self.x, self.y, text = self.name[:2],
-                            fill='black', font = 'Georgia 12')
+    def getSprite(self, app):
+        sprite = app.triangleSpriteUp
+        if(self.name == 'Bat'):
+            sprite = app.batSprites[app.SpriteCounterFast % 10]
+        elif(self.name == 'Rat'):
+            sprite = app.ratSprites[app.SpriteCounterFast % 10]
+        elif(self.name == 'Snae'):
+            sprite = app.snakeSprites[app.SpriteCounterFast % 10]
+        elif(self.name == 'Slime'):
+            sprite = app.slimeSprites[app.SpriteCounterFast % 10]
+        elif(self.name == 'Cat'):
+            sprite = app.catSprites[app.SpriteCounterFast % 15]
+        elif(self.name == 'Gem'):
+            sprite = app.gemSprite
+        elif(self.name == 'Chest'):
+           sprite = app.chestSprite
+        elif(self.name == 'Key'):
+            sprite = app.keySprite
+        elif(self.name == 'Ring'):
+            sprite = app.ringSprite
+        elif(self.name == 'Map'):
+            sprite = app.mapSprite
+        elif(self.name == 'Book'):
+            sprite = app.bookSprite
+        return sprite
+    def redraw(self, app, canvas):
+        sprite = self.getSprite(app)
+        if(sprite != None):
+            canvas.create_image(self.x, self.y, image=ImageTk.PhotoImage(sprite))
+        else:
+            canvas.create_text(self.x, self.y, text = self.name[:2],
+                                fill='black', font = 'Georgia 12')
