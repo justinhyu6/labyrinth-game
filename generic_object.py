@@ -79,10 +79,12 @@ class Wizard(GenericObject):
     def faceRight(self, facingRight):
         self.facingRight = facingRight
     
-    def move(self, app, tileRowShift, tileColShift):
+    def move(self, app, tileRowShift, tileColShift, checkForTreasures):
         if(isValidMove(app, self.tileRow, self.tileCol, (tileRowShift, tileColShift))):
             self.shift(app, tileRowShift, tileColShift)
+        if(checkForTreasures):
             self.checkTreasures(app, True)
+        app.boop.playSound()
         
     def checkTreasures(self, app, changeTurnIfFound):
         treasures = self.getTreasures(app)
@@ -91,6 +93,7 @@ class Wizard(GenericObject):
         if(treasure.getTileRow() == self.tileRow and
             treasure.getTileCol() == self.tileCol):
             treasures.pop(0)
+            app.confirm1.playSound()
             if(treasures == []):
                 app.gameOver = True
             elif(changeTurnIfFound):
@@ -100,14 +103,13 @@ class Wizard(GenericObject):
     
     def getTreasures(self, app):
         if(self.color == 'red'):
-            treasures = app.redTreasuresLeft
+            return app.redTreasuresLeft
         elif(self.color == 'green'):
-            treasures = app.greenTreasuresLeft
+            return app.greenTreasuresLeft
         elif(self.color == 'blue'):
-            treasures = app.blueTreasuresLeft
+            return app.blueTreasuresLeft
         elif(self.color == 'yellow'):
-            treasures = app.yellowTreasuresLeft
-        return treasures
+            return app.yellowTreasuresLeft
 
 class Treasure(GenericObject):
     def __init__(self, app, tileRow, tileCol, name):

@@ -22,13 +22,13 @@ def getHelpMessage(app):
             message = 'Start the game?'
         message += ' (Press space to select)'
     elif(app.gameStarted):
-        if(app.turnCount == 0):
+        if(app.turn == app.blueWizard):
             wizard = 'Blue'
-        elif(app.turnCount == 1):
+        elif(app.turn == app.redWizard):
             wizard = 'Red'
-        elif(app.turnCount == 2):
+        elif(app.turn == app.yellowWizard):
             wizard = 'Yellow'
-        elif(app.turnCount == 3):
+        elif(app.turn == app.greenWizard):
             wizard = 'Green'
             
         if(app.treasuresAdded == False):

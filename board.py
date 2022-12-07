@@ -16,15 +16,9 @@ from helper_functions import *
 # Labyrinth
 #################################################
 
-# More ideas: spiral labyrinth reveal
-# Playing in background title screen
-
-# Todo
-# 
-# Show turn
-# Animated title screen
-# Fixed AI
-
+# Win condition
+# Automatic AI?
+# Select AI mode
 
 def gameDimensions():
     rows = 27
@@ -213,7 +207,12 @@ def appStarted(app):
     generateLabyrinth(app)
     
     app.buttons = []
+
     app.wizards = []
+    app.blueWizard = Wizard(app, 1, 1,'blue', True)
+    app.redWizard = Wizard(app, 7, 1,'red', True)
+    app.yellowWizard = Wizard(app, 7, 7,'yellow', False)
+    app.greenWizard = Wizard(app, 1, 7,'green', False)
     app.treasuresLeft = []
     app.redTreasuresLeft = []
     app.yellowTreasuresLeft = []
@@ -229,17 +228,20 @@ def appStarted(app):
     app.messageLength = 0
 
     # Sounds
-    pygame.mixer.init()
-    app.button = Sound("button.mp3")
+    pygame.mixer.init(44100, -16, 2, 512)
+    app.confirm1 = Sound("abs-confirm-1.mp3")
+    app.confirm1.set_volume(0.1)
     app.confirm2 = Sound("abs-confirm-2.mp3")
-    # app.titleOST = Sound("Echoes.mp3")
-    # app.pointer2 = Sound("abs-pointer-2.mp3")
+    app.confirm2.set_volume(0.1)
+    app.pointer2 = Sound("abs-pointer-2.mp3")
+    app.pointer2.set_volume(0.1)
+    app.place = Sound("shoot02.ogg")
+    app.boop = Sound("boop 1.ogg")
+
+    pygame.mixer.music.load("Echoes.mp3")
 
 def appStopped(app):
-    app.button.stop()
-    app.confirm2.stop()
-    # app.titleOST.stop()
-    # app.pointer2.stop
+    pass
 
 
 #--------Labyrinth generator-------------------------------------------------
@@ -255,16 +257,14 @@ def loadSprites(app, file, x0, y0, size, scale, spriteLength):
     return sprites
 
 def addWizards(app):
-    app.wizards.append(Wizard(app, 1, 1,'blue', True))
-    app.wizards.append(Wizard(app, 7, 1,'red', True))
-    app.wizards.append(Wizard(app, 7, 7,'yellow', False))
-    app.wizards.append(Wizard(app, 1, 7,'green', False))
-    
-    if(app.numWizards > 2):
-        app.turn = app.wizards[0]
-    else:
-        app.turnCount = 1
-        app.turn = app.wizards[1]
+    if(app.numWizards >= 3):
+        app.wizards.append(app.blueWizard)
+    app.wizards.append(app.redWizard)
+    if(app.numWizards == 4):
+        app.wizards.append(app.yellowWizard)
+    app.wizards.append(app.greenWizard)
+
+    app.turn = app.wizards[0]
 
 def addTreasuresToPlayer(app):
     random.shuffle(app.treasuresLeft)
@@ -277,9 +277,11 @@ def addTreasuresToPlayer(app):
         app.yellowTreasuresLeft += app.treasuresLeft[index*3:]
 
     app.redTreasuresLeft.append(Home(app, 7, 1, 'Red'))
-    app.yellowTreasuresLeft.append(Home(app, 7, 7, 'Yellow'))
+    if(app.numWizards == 4):
+        app.yellowTreasuresLeft.append(Home(app, 7, 7, 'Yellow'))
     app.greenTreasuresLeft.append(Home(app, 1, 7, 'Green'))
-    app.blueTreasuresLeft.append(Home(app, 1, 1, 'Blue'))
+    if(app.numWizards >= 3):
+        app.blueTreasuresLeft.append(Home(app, 1, 1, 'Blue'))
 
 def addImmovableTreasures(app):
     app.treasuresLeft.append(Treasure(app, 7, 3, 'Map'))
@@ -411,7 +413,11 @@ def mouseReleased(app, event):
             app.shiftCurrentTile = True
             app.previousMove = (tileRow, tileCol)
         else:
+            app.place.playSound()
             app.currentTile.setTile(app, 1, 10)
+
+        if(app.currentTile.getTreasure() != None):
+            app.currentTile.updateTreasure()
         app.currentTileSelected = False
 
 def placeCurrentTile(app, x, y):
@@ -537,6 +543,9 @@ def keyPressed(app, event):
         app.titleScreen = False
         app.mainMenu = False
         app.gameStarted = True
+        pygame.mixer.music.fadeout(3000)
+        pygame.mixer.music.load("Metropolis.mp3")
+        pygame.mixer.music.play(3000)
 
     if(app.titleScreen == True):
         app.titleScreen = False
@@ -544,8 +553,7 @@ def keyPressed(app, event):
     
     if(app.mainMenu == True):
         if(event.key == 'Space'):
-            if app.confirm2.isPlaying(): app.confirm2.stop()
-            else: app.confirm2.start()
+            app.confirm2.playSound()
             if(app.menuIndex == 0):
                 app.modesIndex = (app.modesIndex + 1) % 3
             elif(app.menuIndex == 1):
@@ -556,18 +564,19 @@ def keyPressed(app, event):
                 app.mainMenu = False
                 app.gameStarted = True
                 app.messageLength = 0
+                pygame.mixer.music.fadeout(1000)
+                # pygame.mixer.music.load("Metropolis.mp3")
+                # pygame.mixer.music.play(3000)
 
         elif(event.key == 'Up'):
-            if app.button.isPlaying(): app.button.stop()
-            else: app.button.start()
+            app.pointer2.playSound()
             app.messageLength = 0
             app.menuIndex -= 1
             app.SpriteCounterSlow = 4
             if(app.menuIndex < 0):
                 app.menuIndex = 2
         elif(event.key == 'Down'):
-            if app.button.isPlaying(): app.button.stop()
-            else: app.button.start()
+            app.pointer2.playSound()
             app.messageLength = 0
             app.menuIndex += 1
             app.SpriteCounterSlow = 4
@@ -575,7 +584,7 @@ def keyPressed(app, event):
                 app.menuIndex = 0
             
     if(app.gameStarted == True):
-        # app.titleOST.stop()
+        
         if(event.key == '1'):
             app.redTreasuresLeft = [app.redTreasuresLeft[-1]]
         
@@ -583,45 +592,31 @@ def keyPressed(app, event):
             bestMove2(app, app.wizards[app.turnCount],
                         app.wizards[(app.turnCount+2)%4])
         
-        if(event.key == '4'):
+        if(event.key == '4' and app.rotateShiftMode):
             bestMove4(app, app.wizards[app.turnCount])
         
         if(event.key == 'r'):
             app.currentTile.rotate(1)
+            app.boop.playSound()
         elif(event.key == 'Space' and app.moveMode == True):
+            app.confirm2.playSound()
             changeTurn(app)
             app.messageLength = 0
         for wizard in app.wizards:
             if(app.moveMode == True and app.turn == wizard):
                 if(event.key == 'Up'):
-                    wizard.move(app, -1, 0)
+                    wizard.move(app, -1, 0, True)
                 elif(event.key == 'Down'):
-                    wizard.move(app, 1, 0)
+                    wizard.move(app, 1, 0, True)
                 elif(event.key == 'Left'):
-                    wizard.move(app, 0, -1)
+                    wizard.move(app, 0, -1, True)
                     wizard.faceRight(False)
                 elif(event.key == 'Right'):
-                    wizard.move(app, 0, 1)
+                    wizard.move(app, 0, 1, True)
                     wizard.faceRight(True)
 
 def changeTurn(app):
-    if(app.numWizards == 4):
-        app.turnCount += 1
-        if(app.turnCount == 4):
-            app.turnCount = 0
-            
-    elif(app.numWizards == 2):
-        app.turnCount += 2
-        if(app.turnCount == 5):
-            app.turnCount = 1
-
-    elif(app.numWizards == 3):
-        if(app.turnCount == 1):
-            app.turnCount += 2
-        else:
-            app.turnCount += 1
-        if(app.turnCount == 4):
-            app.turnCount = 0
+    app.turnCount = (app.turnCount+1)%app.numWizards
 
     app.turn = app.wizards[app.turnCount]
     app.moveMode = False
@@ -629,8 +624,9 @@ def changeTurn(app):
 
 def timerFired(app):
     app.timePassed += 1
-    # if(app.timePassed == 10):
-    #     app.titleOST.start()
+    if(app.timePassed == 3):
+        pygame.mixer.music.set_volume(0.2)
+        pygame.mixer.music.play(3000)
     if(app.timePassed % 2):
         app.SpriteCounterFast += 1
     if(app.timePassed % 6 == 0):
@@ -641,7 +637,7 @@ def timerFired(app):
 
     if(app.gameStarted == True):
         app.messageLength += 2
-        if(app.boardCreated == False and app.timePassed % 1 == 0): #5
+        if(app.boardCreated == False and app.timePassed % 5 == 0): #5
             boardCreationAnimation(app)
         if(app.boardCreated == True):
             if(app.treasuresAdded == False):
@@ -652,33 +648,38 @@ def timerFired(app):
                 addTreasuresToPlayer(app)
                 app.treasuresAdded = True
 
-            if(app.timePassed % 5 == 0 and app.drawPath == True and app.shiftCurrentTile == False):
+            if(app.timePassed % 3 == 0 and app.drawPath == True and app.shiftCurrentTile == False):
                 if(app.pathLength == len(app.path)):
                     app.pathLength = 0
                     app.drawPath = False
-                    print('done')
                     if(app.turn.checkTreasures(app, True) == False):
                         changeTurn(app)
                 else:
                     app.pathLength += 1
                     newPos = app.path[app.pathLength - 1]
-                    # if(newPos[1] > app.turn.getTileCol()):
-                    #     app.turn.move(app, 0, 1)
-                    # elif(newPos[1] < app.turn.getTileCol()):
-                    #     app.turn.move(app, 0, -1)
-                    # elif(newPos[0] > app.turn.getTileRow()):
-                    #     app.turn.move(app, 1, 0)
-                    # elif(newPos[0] < app.turn.getTileRow()):
-                    #     app.turn.move(app, -1, 0)
-                    app.turn.setPos(app, newPos[0], newPos[1])
+                    if(newPos[1] > app.turn.getTileCol()):
+                        app.turn.move(app, 0, 1, False)
+                        app.turn.faceRight(True)
+                    elif(newPos[1] < app.turn.getTileCol()):
+                        app.turn.move(app, 0, -1, False)
+                        app.turn.faceRight(False)
+                    elif(newPos[0] > app.turn.getTileRow()):
+                        app.turn.move(app, 1, 0, False)
+                    elif(newPos[0] < app.turn.getTileRow()):
+                        app.turn.move(app, -1, 0, False)
+                    # app.turn.setPos(app, newPos[0], newPos[1])
 
             if(app.shiftCurrentTile == True):
+                if(app.shiftCounter == 0):
+                    app.place.playSound()
                 app.shiftCounter += 1
                 if(app.shiftCounter == 8):
+                    app.place.playSound()
                     shiftBoard(app, app.currentTile.getTileRow(), 
                             app.currentTile.getTileCol())
                 elif(app.shiftCounter == 18):
                     shiftCurrentTile(app)
+                    app.place.playSound()
 
 def boardCreationAnimation(app):
     for tileRow in range(1, 8):
@@ -689,6 +690,8 @@ def boardCreationAnimation(app):
     if(app.diagonalsDrawn == 13):
         app.currentTile.displayOnScreen()
         app.boardCreated = True
+    else:
+        app.place.playSound()
 
 #--------View / redrawAll-------------------------------------------------
 def redrawAll(app, canvas):
@@ -914,32 +917,28 @@ def rotateImage(image, times):
 #--------Recursive solver--------------------------------------------
 
 # For 2 - 4 Players
-def bestMove2(app, wizard, depth = 0):
+def bestMove4(app, wizard):
+    bestScore = 99
     bestMove = (-1, -1)
     rotations = 0
 
     for j in range(1, 5):
-        if(depth == 0):
-            app.currentTile.rotate(1)
-        if(depth >= 1 and j == 1):
-            for i in range(len(app.moves)):
-                position = (wizard.getTileRow(), wizard.getTileCol())
-                redTreasuresBefore = copy.copy(app.redTreasuresLeft)
-                greenTreasuresBefore = copy.copy(app.greenTreasuresLeft)
+        app.currentTile.rotate(1)
+        for i in range(len(app.moves)):
+            position = (wizard.getTileRow(), wizard.getTileCol())
+            path = doMove2(app, wizard, app.moves[i])
+            score = evaluate(app, wizard, 1)
+            if(score < bestScore):
+                bestScore = score
+                bestMove = app.moves[i]
+                app.path = path
+                rotations = j
+                # print(bestScore)
 
-                path = doMoveWithoutMoving(app, wizard, app.moves[i])
-
-                if(path != False and depth == 0):
-                    bestMove = app.moves[i]
-                    app.path = path
-                    rotations = j
-
-                undoMove(app, wizard, app.undoMoves[i], position)
-                app.redTreasuresLeft = redTreasuresBefore
-                app.greenTreasuresLeft = greenTreasuresBefore
+            undoMove(app, wizard, app.undoMoves[i], position)
     
+    # Print and perform the move
     print(f'BEST MOVE: {rotations}, {bestMove}, {app.path}, {bestScore}')
-
     app.currentTile.rotate(rotations)
     app.currentTile.setTile(app, bestMove[0], bestMove[1])
     if(app.currentTile.getTreasure() != None):
@@ -947,16 +946,38 @@ def bestMove2(app, wizard, depth = 0):
     app.shiftCurrentTile = True
     app.drawPath = True
 
-def doMoveWithoutMoving(app, wizard, move):
+def evaluate(app, wizard, maxDepth, depth=0):
+    target = wizard.getTreasures(app)
+    target = target[0]
+    if(depth == maxDepth):
+        return closestPath(app, wizard)[2]
+    elif(target.getTileRow() == wizard.getTileRow() and 
+        target.getTileCol() == wizard.getTileCol()):
+        # print('found')
+        return -99
+
+    bestScore = 99
+    for i in range(len(app.moves)):
+        position = (wizard.getTileRow(), wizard.getTileCol())
+        
+        doMove2(app, wizard, app.moves[i])
+        result = evaluate(app, wizard, maxDepth, depth+1)
+
+        # Undo moves
+        undoMove(app, wizard, app.undoMoves[i], position)
+
+        if(result < bestScore):
+            bestScore = result
+    return bestScore
+
+def doMove2(app, wizard, move):
     shiftBoard(app, move[0], move[1])
     shiftCurrentTile(app)
     path = closestPath(app, wizard)[1]
-    targetTreasure = wizard.getTreasures[-1]
-    closestPos = path[-1]
-    if(closestPos == (targetTreasure.getTileRow(), targetTreasure.getTileRow())):
-        return path
-    else:
-        return False
+    newPos = path[-1]
+    wizard.setPos(app, newPos[0], newPos[1])
+    # wizard.checkTreasures(app, False)
+    return path
 
 #--------Minimax solver--------------------------------------------
 
@@ -1093,11 +1114,17 @@ def closestPath(app, wizard):
     path = []
     bestPath = []
     targetTreasure = None
+    # targetTreasure = wizard.getTreasures(app)[0]
 
-    if(wizard == app.wizards[0]):
+    if(wizard == app.blueWizard):
+        targetTreasure = app.blueTreasuresLeft[0]
+    elif(wizard == app.redWizard):
         targetTreasure = app.redTreasuresLeft[0]
-    else:
+    elif(wizard == app.yellowWizard):
+        targetTreasure = app.yellowTreasuresLeft[0]
+    elif(wizard == app.greenWizard):
         targetTreasure = app.greenTreasuresLeft[0]
+
     
     result = solve(app, path, visited, targetTreasure, wizard.getTileRow(), 
                 wizard.getTileCol(), bestPath, leastDistance)
@@ -1245,29 +1272,21 @@ class Tile:
 
 #--------Sound--------------------------------------------
 
-# https://www.cs.cmu.edu/~112/notes/notes-animations-part4.html#playingSoundsWithPygame
+# Thanks to TA Dane for answering my question about sound on Piazza
 
 class Sound(object):
     def __init__(self, path):
         self.path = path
-        self.loops = 1
-        pygame.mixer.music.load(path)
+        self.sound = pygame.mixer.Sound(path)
 
-    # Returns True if the sound is currently playing
-    def isPlaying(self):
-        return bool(pygame.mixer.music.get_busy())
+    def playSound(self):
+        self.sound.play()
 
-    # Loops = number of times to loop the sound.
-    # If loops = 1 or 1, play it once.
-    # If loops > 1, play it loops + 1 times.
-    # If loops = -1, loop forever.
-    def start(self, loops=1):
-        self.loops = loops
-        pygame.mixer.music.play(loops=loops)
-
-    # Stops the current sound from playing
-    def stop(self):
-        pygame.mixer.music.stop()
+    def stopSound(self):
+        self.sound.stop()
+    
+    def set_volume(self, amt):
+        self.sound.set_volume(amt)
 
 #---------------------------------------------------------
 
