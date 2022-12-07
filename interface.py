@@ -1,20 +1,19 @@
+from cmu_112_graphics import *
+
 class Button:
-    def __init__(self, x, y, width, height, color, function):
+    def __init__(self, x, y, image, function):
         self.x = x
         self.y = y
-        self.width = width
-        self.height = height
-        self.color = color
+        self.width, self.height = image.size
+        self.image = image
         self.function = function
 
     def redraw(self, canvas):
-        canvas.create_rectangle(self.x, self.y,
-                                self.x+self.width, self.y+self.height,
-                                fill=self.color, width=0)
+        canvas.create_image(self.x, self.y, image=ImageTk.PhotoImage(self.image))
 
     def containsPoint(self, x, y):
-        if(x >= self.x and x <= self.x+self.width):
-            if(y >= self.y and y <= self.y+self.height):
+        if(x >= self.x-self.width/2 and x <= self.x+self.width/2):
+            if(y >= self.y-self.height/2 and y <= self.y+self.height/2):
                 return True
 
     def mousePressed(self, event):

@@ -45,6 +45,10 @@ class Wizard(GenericObject):
             return True
         return False
 
+    def updateWizard(self, x, y):
+        self.x = x
+        self.y = y
+
     def setPos(self, app, tileRow, tileCol):
         self.tileRow = tileRow
         self.tileCol = tileCol
@@ -92,10 +96,11 @@ class Wizard(GenericObject):
         treasure = treasures[0]
         if(treasure.getTileRow() == self.tileRow and
             treasure.getTileCol() == self.tileCol):
-            treasures.pop(0)
             app.confirm1.playSound()
+            treasures.pop(0)
             if(treasures == []):
                 app.gameOver = True
+                app.confirm2.playSound()
             elif(changeTurnIfFound):
                 changeTurn(app)
             return True

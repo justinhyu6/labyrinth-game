@@ -15,9 +15,9 @@ def getHelpMessage(app):
     message = ''
     if(app.mainMenu ):
         if(app.menuIndex == 0):
-            message = 'Choose to play against another player, play against a MiniMax AI, \nor watch two AIs play against each other!'
+            message = 'Change the number of AI.'
         elif(app.menuIndex == 1):
-             message = 'Display helper messages in game.'
+             message = 'Change the number of players.'
         elif(app.menuIndex == 2):
             message = 'Start the game?'
         message += ' (Press space to select)'
