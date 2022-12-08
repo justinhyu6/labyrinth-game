@@ -1,3 +1,7 @@
+![thumbnail](https://user-images.githubusercontent.com/118138273/206323873-4b08ca85-1139-4c60-83ec-b35543926e93.png)
+
+![image](https://user-images.githubusercontent.com/118138273/206323955-5c54d6e9-6820-44a1-9d58-546bac2d6211.png)
+
 # labyrinth-game
 
 ## Labyrinth
