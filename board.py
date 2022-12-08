@@ -641,7 +641,7 @@ def keyPressed(app, event):
             app.confirm1.playSound()
         if(event.key == '2'):
             bestMove2(app, app.wizards[app.turnCount],
-                        app.wizards[(app.turnCount+2)%4])
+                        app.wizards[(app.turnCount+1)%2])
         if(event.key == '4' and app.rotateShiftMode):
             bestMove4(app, app.wizards[app.turnCount])
         if(event.key == 'r'):
@@ -690,7 +690,7 @@ def timerFired(app):
     app.timePassed += 1
     if(app.timePassed == 3):
         pygame.mixer.music.set_volume(0.2)
-        # pygame.mixer.music.play(-1, 0, 1500)
+        pygame.mixer.music.play(-1, 0, 1500)
     if(app.timePassed % 2):
         app.SpriteCounterFast += 1
     if(app.timePassed % 6 == 0):
@@ -1124,6 +1124,8 @@ def bestMove2(app, wizard, otherWizard):
             position = (wizard.getTileRow(), wizard.getTileCol())
             redTreasuresBefore = copy.copy(app.redTreasuresLeft)
             greenTreasuresBefore = copy.copy(app.greenTreasuresLeft)
+            blueTreasuresBefore = copy.copy(app.blueTreasuresLeft)
+            yellowTreasuresBefore = copy.copy(app.yellowTreasuresLeft)
 
             path = doMove(app, wizard, app.moves[i])
             
@@ -1140,13 +1142,18 @@ def bestMove2(app, wizard, otherWizard):
             undoMove(app, wizard, app.undoMoves[i], position)
             app.redTreasuresLeft = redTreasuresBefore
             app.greenTreasuresLeft = greenTreasuresBefore
+            app.blueTreasuresLeft = blueTreasuresBefore
+            app.yellowTreasuresLeft = yellowTreasuresBefore
     
     print(f'BEST MOVE: {rotations}, {bestMove}, {app.path}, {bestScore}')
-
+    app.previousMove = bestMove
     app.currentTile.rotate(rotations)
+
     app.currentTile.setTile(app, bestMove[0], bestMove[1])
     if(app.currentTile.getTreasure() != None):
         app.currentTile.updateTreasure()
+    app.board[bestMove[0]][bestMove[1]] = app.currentTile
+    app.currentTile = None
     app.shiftCurrentTile = True
     app.drawPath = True
 
@@ -1165,6 +1172,8 @@ def minimax(app, wizard, otherWizard, maximising, maxDepth, depth=0):
                 position = (wizard.getTileRow(), wizard.getTileCol())
                 redTreasuresBefore = copy.copy(app.redTreasuresLeft)
                 greenTreasuresBefore = copy.copy(app.greenTreasuresLeft)
+                blueTreasuresBefore = copy.copy(app.blueTreasuresLeft)
+                yellowTreasuresBefore = copy.copy(app.yellowTreasuresLeft)
                 
                 path = doMove(app, wizard, app.moves[i])
                 result = minimax(app, wizard, otherWizard, False, maxDepth, depth+1)
@@ -1173,6 +1182,8 @@ def minimax(app, wizard, otherWizard, maximising, maxDepth, depth=0):
                 undoMove(app, wizard, app.undoMoves[i], position)
                 app.redTreasuresLeft = redTreasuresBefore
                 app.greenTreasuresLeft = greenTreasuresBefore
+                app.blueTreasuresLeft = blueTreasuresBefore
+                app.yellowTreasuresLeft = yellowTreasuresBefore
 
                 if(result > bestScore):
                     bestScore = result
