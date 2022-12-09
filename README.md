@@ -5,7 +5,7 @@
 [![CMU 15-112 Term Project: Labyrinth](https://i.imgur.com/XcKfYSw.png))](https://www.youtube.com/watch?v=BQ9mzY54iyI "CMU 15-112 Term Project: Labyrinth")
 
 ## Labyrinth
-This is a game made for my 15-112 term project, based on the rules of the board game Labyrinth. In this game, you are a Wizard, and you are trying to find all of your magical objects in a constantly changing maze. 
+This is a game made for my 15-112 CMU term project, based on the rules of the board game Labyrinth. In this game, you are a Wizard, and you are trying to find all of your magical objects in a constantly changing maze. 
 
 ## How to run the project
 Run the file board.py in an editor. The fonts m3x6 and Gothic Pixel Font should also be installed by running the .ttf files
