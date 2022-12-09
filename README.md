@@ -1,3 +1,6 @@
+
+![thumbnail](https://user-images.githubusercontent.com/118138273/206615962-29e46862-a60d-43b8-a967-ea7caede44eb.png)
+
 # Gameplay
 [![CMU 15-112 Term Project: Labyrinth](https://i.imgur.com/XcKfYSw.png))](https://www.youtube.com/watch?v=BQ9mzY54iyI "CMU 15-112 Term Project: Labyrinth")
 
